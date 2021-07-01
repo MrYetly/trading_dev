@@ -1,0 +1,148 @@
+\documentclass{article}
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\graphicspath{{../dev/}}
+
+\title{Strategy Analysis: Progressive Entry}
+\author{Ivan Anich}
+
+\begin{document}
+\maketitle
+
+\section{signal}
+
+up 20\% from the open, \(1<= previous close <= 2\)
+
+\section{Strategy: Add Every 5\%, Exit at 11}
+
+enter short position at 20\% (if occurs between 9:30 and 11), add positions twice as big as the last each time the stock increases another 5\%, only exit at 11.
+
+65 trades between February 26th and May 28th. 
+
+\subsection{Analysis}
+
+high correlation between number of entries and percent return: the more it goes up, the better.
+
+\begin{itemize}
+	\item histogram
+		
+	\begin{figure}
+	\center{Histogram of Trades by Number of Entries for Unlimited Adds, Exit at 11 a.m.}
+	\includegraphics[width=\textwidth]{prog_entry_hist.pdf}
+	\caption{This table shows counts of the numbers of trades that had a certain amount of entries. For example, it says that 25 trades had only 1 entry, and that 3 trades had 5 entries (fist entry and 4 adds).}
+	\label{hist_strat}
+	\end{figure}
+	
+	\item three tables
+	
+\begin{table}
+\caption{Performance of Default Strategy}
+\center{Overall}
+\\[2ex]
+\input{../dev/prog_entry_ovr.tex}
+
+\center{Winners}
+\\[2ex]
+\input{../dev/prog_entry_win.tex}
+
+\center{Losers}
+\\[2ex]
+\input{../dev/prog_entry_loss.tex}
+\label{tab_strat}
+\end{table}
+
+	\item weighted expected return plot
+	
+	\begin{figure}
+	\center{Weighted Average Returns for Unlimited Adds, Exit at 11 a.m.}
+	\includegraphics[width=\textwidth]{prog_entry_w_avg.pdf}
+	\caption{This plot shows the weighted expected return to a limited version of the main strategy. Returns are weighted by their position size. Trades with more adds have higher weight. The returns on trades with higher weight have a larger affect on the weighted average than they would in an unweighted average. The x-axis displays the maximum number of entries allowed in a single trade. In the unlimited case, a trade can be entered each time it rises 5\%. But in the case where adds are limited to 4, the total number of entries allowed in any stock is 5 (first entry then 4 adds). So this plot says that when the maximum amount of entries is 5 (i.e. at most 4 adds) the weighted returns were around 2.5\%. When the amount of entries is limited to 5 (first entry, 4 adds), stocks that rise more than 25\% beyond the signal of 20\% are not added to beyond the first 4 adds.}
+	\label{w_avg_strat}
+	\end{figure}
+	
+	\item three plot
+	
+	\begin{figure}
+	\center{Win Rate, Unweighted Average Return, and Average Win/Loss for  Unlimited Adds, Exit at 11 a.m.}
+	
+	
+	\includegraphics[width=0.6\textwidth]{prog_entry_3plot.pdf}
+	\caption{The x-axis displays the maximum number of entries allowed in a single trade. In the unlimited case, a trade can be entered each time it rises 5\%. But in the case where adds are limited to 4, the total number of entries allowed in any stock is 5 (first entry then 4 adds). So the top panel says that when the maximum amount of entries is 5 (i.e. at most 4 adds) the returns were around 5.75\%. When the amount of entries is limited to 5 (first entry, 4 adds), stocks that rise more than 25\% beyond the signal of 20\% are not added to beyond the first 4 adds.}
+	\label{3plot_strat}
+	\end{figure}
+	
+	\item weighted expected return calculation: 29.7\%
+\end{itemize}
+
+\section{Alternate Strategy A: Adds Limited to 2, Exit at 11}
+
+percent of trades with 2 or more adds, 47\%
+
+\subsection{Analysis}
+
+\begin{itemize}
+	\item three tables
+	
+\begin{table}
+\caption{Performance of Max 3 Adds, Exit at 11 a.m.}
+\center{Overall}
+\\[2ex]
+\input{../dev/prog_entry_lim3_ovr.tex}
+
+\center{Winners}
+\\[2ex]
+\input{../dev/prog_entry_lim3_win.tex}
+
+\center{Losers}
+\\[2ex]
+\input{../dev/prog_entry_lim3_loss.tex}
+\label{tab_strat_lim3}
+\end{table}
+	
+	\item weighted expected return calculation: 0.9\%
+\end{itemize}
+
+\section{Alternate Strategy B: Adds limited to 2, Exit at Close}
+
+percent of trades with 2 or more adds, 41\%
+
+146 trades between February 26th and May 28th. 
+
+\subsection{Analysis}
+
+\begin{itemize}
+	\item histogram
+	
+	\begin{figure}
+	\center{Histogram of Trades by Number of Entries for Unlimited Adds, Exit at Close}
+	\includegraphics[width=\textwidth]{prog_entry_exit4_hist.pdf}
+	\caption{This table shows counts of the numbers of trades that had a certain amount of entries. For example, it says that around 57 trades had only 1 entry, and that around 3 trades had 9 entries (fist entry and 8 adds).}
+	\label{hist_strat_exit4}
+	\end{figure}
+	
+	\item three tables
+	
+	\begin{table}
+\caption{Performance of Max 2 Adds, Exit at Close}
+\center{Overall}
+\\[2ex]
+\input{../dev/prog_entry_lim3_exit4_ovr.tex}
+
+\center{Winners}
+\\[2ex]
+\input{../dev/prog_entry_lim3_exit4_win.tex}
+
+\center{Losers}
+\\[2ex]
+\input{../dev/prog_entry_lim3_exit4_loss.tex}
+\label{tab_strat_lim3_exit4}
+\end{table}
+
+	\item weighted expected return calculation: 7.6\%
+\end{itemize}
+
+\end{document}

@@ -4,11 +4,11 @@ from datetime import datetime
 import time
 
 ###organize initial data
-data_path = '../data/gap up 25 12302020/'
+data_path = '../data/high up 20 1 lt prev close lt 2 06072021/'
 init_data = {}
 filenames = os.listdir(data_path)
 unique = set()
-unique_limit = 500000
+unique_limit = 500
 for f in filenames:
     if f[-4:] == '.csv':
         d = f[-4-8:-4]
@@ -41,7 +41,7 @@ print('total "trades:"',count, 'unique tickers:', len(unique), 'unique limit:', 
 ###pull time series data and aggregate
 
 count = 0
-max_count = 5
+#max_count = 5
 price_data = pd.DataFrame()
 for ticker, d_list in init_data.items():
     
@@ -49,8 +49,8 @@ for ticker, d_list in init_data.items():
     print(count)
 
     #if count > max_count:
-     #   print('max count hit')
-      #  break
+    #    print('max count hit')
+    #    break
     
     if count % 5 == 1 and count != 1:
         print('waiting...')
@@ -73,33 +73,42 @@ for ticker, d_list in init_data.items():
         d_o = datetime.strptime(d_o, '%Y-%m-%d').date()
 
         #find other days if necessary (referenced by delta from now)
-        d_dict = {
-                '0': d_o,
-        }
-        ts_dates = list(ts.keys())
-        ref = ts_dates.index(str(d_o))
-        lags = list(range(-253,1))
-        ahead = list(range(1,6))
-        date_range = lags+ahead
-        for d in date_range:
-            if d == 0:
-                continue
-            try:
-                d_i = ts_dates[ref-d]
-                d_i = datetime.strptime(d_i, '%Y-%m-%d').date()
-                d_dict[str(d)] = d_i
+        try:
+            d_dict = {
+                    '0': d_o,
+            }
+            ts_dates = list(ts.keys())
+            ref = ts_dates.index(str(d_o))
+
+            #set number of lags
+            lags = list(range(-253,1))
+
+            #set number of days ahead
+            ahead = list(range(1,6))
+            date_range = lags+ahead
             
-            except:
-                print(f'Error for {ticker} on {str(d_o)}, lag {d}')
-                continue
-            
-        for delta, d in d_dict.items():
-                row = pd.Series(ts[str(d)])
-                row['init date'] = str(d_dict['0'])
-                row['date'] = str(d)
-                row['ticker'] = ticker
-                row['delta'] =  delta
-                price_data = price_data.append(row, ignore_index=True,)
+            for d in date_range:
+                if d == 0:
+                    continue
+                try:
+                    d_i = ts_dates[ref-d]
+                    d_i = datetime.strptime(d_i, '%Y-%m-%d').date()
+                    d_dict[str(d)] = d_i
+                
+                except:
+                    print(f'Error for {ticker} on {str(d_o)}, lag {d}')
+                    continue
+                
+            for delta, d in d_dict.items():
+                    row = pd.Series(ts[str(d)])
+                    row['init date'] = str(d_dict['0'])
+                    row['date'] = str(d)
+                    row['ticker'] = ticker
+                    row['delta'] =  delta
+                    price_data = price_data.append(row, ignore_index=True,)
+        except:
+            print(f'Failed to process init date {d_o} for {ticker}')
+            continue
 
 print(price_data)
-price_data.to_csv('../data/gap u 25 12302020 agg -253 5.csv')
+price_data.to_csv('../data/high up 20 1 lt prev close lt 2 06072021 agg -253 5.csv')

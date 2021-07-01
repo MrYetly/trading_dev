@@ -6,46 +6,71 @@ import time
 from io import StringIO
 
 ###organize initial data
-data_path = '../data/gap up 25 12302020/'
+data_path = '../data/high up 20 1 lt prev close lt 2 06072021/'
 init_data = {}
 filenames = os.listdir(data_path)
+
 #month slice reference dates
+
+#reference list of start date for each month-slice (ms 1 is most recent month)
 ref = [
-                datetime.strptime('12/7/2020', '%m/%d/%Y').date(),
-                datetime.strptime('11/5/2020', '%m/%d/%Y').date(),
-                datetime.strptime('10/6/2020', '%m/%d/%Y').date(),
-                datetime.strptime('9/8/2020', '%m/%d/%Y').date(),
-                datetime.strptime('8/7/2020', '%m/%d/%Y').date(),
+                datetime.strptime('5/26/2021', '%m/%d/%Y').date(),
+                datetime.strptime('4/26/2021', '%m/%d/%Y').date(),
+                datetime.strptime('3/29/2021', '%m/%d/%Y').date(),
+                datetime.strptime('2/25/2021', '%m/%d/%Y').date(),
+                #datetime.strptime('12/28/2020', '%m/%d/%Y').date(),
+                #datetime.strptime('11/27/2020', '%m/%d/%Y').date(),
+                #datetime.strptime('6/18/2020', '%m/%d/%Y').date(),
+                #datetime.strptime('5/19/2020', '%m/%d/%Y').date(),
+                #datetime.strptime('4/20/2020', '%m/%d/%Y').date(),
+                #datetime.strptime('3/20/2020', '%m/%d/%Y').date(),
 ]
+
+req_limit = 490
+t_count = 0
+ms_count = 0
+limit_reached = False
+
 for f in filenames:
+    
+    if limit_reached == True:
+        print('request limit reached, first remaining file:', f)
+        break
+    
     if f[-4:] == '.csv':
         d = f[-4-8:-4]
         d = f'{d[-4:]}-{d[:2]}-{d[2:4]}'
         d = datetime.strptime(d, '%Y-%m-%d').date()
+        #latest = datetime.strptime('8/7/2020', '%m/%d/%Y').date()
+        #if d >= latest:
+         #   continue
         df = pd.read_csv(data_path+f)
         tickers = df['Symbol']
         tickers = tickers.dropna()
         tickers = list(tickers)
         
-        for ticker in tickers:
-            for d_r in ref:
-                if d >= d_r:
-                    m = str(ref.index(d_r) +1)
-                    break
-            
-            if init_data.get(ticker) == None:
-                init_data[ticker] = {m:[d,]}
-            elif init_data[ticker].get(m) == None:
-                init_data[ticker][m] = [d,]
-            else:
-                init_data[ticker][m].append(d)
+        if ms_count + len(tickers) > req_limit:
+            print('request limit potentially reached, first remaining file:', f)
+            break
+        else:
+            for ticker in tickers:
+                
+                t_count += 1
+                
+                for d_r in ref:
+                    if d >= d_r:
+                        m = str(ref.index(d_r) +1)
+                        break
+                
+                if init_data.get(ticker) == None:
+                    init_data[ticker] = {m:[d,]}
+                    ms_count += 1
+                elif init_data[ticker].get(m) == None:
+                    init_data[ticker][m] = [d,]
+                    ms_count += 1
+                else:
+                    init_data[ticker][m].append(d)
 
-t_count = 0
-ms_count = 0
-for ticker, md_dict in init_data.items():
-    ms_count += len(list(md_dict.keys()))
-    for t_list in md_dict.values():
-        t_count += len(t_list)
 
 print('total "trades:"',t_count, 'total month-slices:', ms_count)
 
@@ -58,8 +83,8 @@ price_data = pd.DataFrame()
 for ticker, md_dict in init_data.items():
      
     #if count > max_count:
-     #       print('max count hit')
-      #      break
+            #print('max count hit')
+            #break
         
     #pull time series by month slice
     for m, d_list in md_dict.items():
@@ -67,14 +92,14 @@ for ticker, md_dict in init_data.items():
         print(count)
     
         #if count > max_count:
-         #   print('max count hit')
-          #  break
+            #print('max count hit')
+            #break
         
         if count % 5 == 1 and count != 1:
             print('waiting...')
             time.sleep(60)
     
-        price_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY_EXTENDED&symbol={ticker}&interval=5min&slice=year1month{m}&apikey=HJYREXCXYL2536T7'
+        price_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY_EXTENDED&symbol={ticker}&interval=5min&adjusted=false&slice=year1month{m}&apikey=HJYREXCXYL2536T7'
         try:
             r = requests.get(price_url)
             content = StringIO(r.content.decode('utf-8'))
@@ -102,4 +127,4 @@ for ticker, md_dict in init_data.items():
                 continue
 
 print(price_data)
-price_data.to_csv('../data/gap u 25 12302020 agg intra 5 min.csv')
+price_data.to_csv('../data/high up 20 1 lt prev close lt 2 06072021 intra 5 min.csv')
