@@ -33,13 +33,13 @@ entry_day = 0
 #entry level = change w.r.t. open
 entry_level = 0.2
 increment = 0.05
-max_entries = None
+max_entries = 3
 exit_day = 0
 initial_val = 100000
 #set time slot (remember, 24 hour clock)
 t_start_h = 9
 t_start_m = 30
-t_end_h = 16
+t_end_h = 11
 t_end_m = 0
 #don't set checking=True if exit_day=1 and exit_time='open'
 #checking is broken for now
@@ -394,12 +394,34 @@ output.plot(
 )
 ax3.set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
 
+#3 part histogram
+
+fig4, ax4 = plt.subplots(3, 1, figsize = (8, 15))
+
+for i in range(1,4):
+    
+    df = sample.loc[sample.n_entries == i]
+    
+    df.hist(
+        column = 'pc_return',
+        ax = ax4[i-1],
+        bins = np.arange(-0.5, 0.6, 0.1),
+        )
+    
+    ax4[i-1].set(xlabel = 'Percent Return', ylabel = 'Count')
+    ax4[i-1].set_title(f'Histogram of Percent Return for {i} Entries')
+    ax4[i-1].set_xticks(np.arange(-0.5, 0.6, 0.1))
+    ax4[i-1].set_ylim(0,12)
+
+
+
+
+#fig.savefig('prog_entry_3plot.pdf')
+#fig2.savefig('prog_entry_exit4_hist.pdf')
+#fig3.savefig('prog_entry_exit4_w_avg.pdf')
+fig4.savefig('prog_entry_lim3_hist_by_entry.pdf')
 
 #number of trades with entries >=3
 gt3 = sample.loc[sample.n_entries >= 3].shape[0]
 
 print('numer of trades with >= 3 entries: ', gt3/sample.shape[0])
-
-#fig.savefig('prog_entry_3plot.pdf')
-#fig2.savefig('prog_entry_exit4_hist.pdf')
-#fig3.savefig('prog_entry_w_avg.pdf')
