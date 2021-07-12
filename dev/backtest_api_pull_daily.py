@@ -4,7 +4,7 @@ from datetime import datetime
 import time
 
 ###organize initial data
-data_path = '../data/high up 20 1 lt prev close lt 2 06072021/'
+data_path = '../data/gap down new HY low 07092021/'
 init_data = {}
 filenames = os.listdir(data_path)
 unique = set()
@@ -111,4 +111,4 @@ for ticker, d_list in init_data.items():
             continue
 
 print(price_data)
-price_data.to_csv('../data/high up 20 1 lt prev close lt 2 06072021 agg -253 5.csv')
+price_data.to_csv('../data/gap down new HY low 07092021 agg -253 5.csv')

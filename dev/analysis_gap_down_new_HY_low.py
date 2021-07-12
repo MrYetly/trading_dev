@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Jun  3 09:30:39 2021
+Created on Sat Jul 10 12:36:14 2021
 
 @author: ianich
 """
-
-
 import pandas as pd
 import numpy as np
 from statsmodels.regression.quantile_regression import QuantReg
@@ -15,21 +13,20 @@ from statsmodels.iolib.summary2 import summary_col
 from matplotlib import pyplot as plt
 from datetime import datetime
 
-#Params 
+#Params (remember, with morning check)
 final_day = 5
-exit_time = 'close'
+exit_day = 1
 entry_day = 0
-#entry level = change w.r.t. open
-entry_level = 0.2
-exit_day = 0
+exit_time = 'open'
+entry_time = 'open'
 initial_val = 25000
 #don't set checking=True if exit_day=1 and exit_time='open'
-#checking is broken for now
 checking = False
-check_range = range(4, exit_day)
+check_range = range(1, exit_day)
+
 
 #create new variables
-master = pd.read_csv('../data/high up 20 1 lt prev close lt 2 06072021 agg -253 5.csv')
+master = pd.read_csv('../data/gap down new HY low 07092021 agg -253 5.csv')
 print('Building master DF')
 master = master.rename(columns = {
                 '1. open': 'open',
@@ -41,23 +38,52 @@ master = master.rename(columns = {
             },
 )
 
-master.date = pd.to_datetime(master.date)
-master.init_date = pd.to_datetime(master.init_date)
-earliest = datetime.strptime('2021-02-26', '%Y-%m-%d')
-latest = datetime.strptime('2021-05-28', '%Y-%m-%d')
-master = master.loc[master.init_date >= earliest]
-master = master.loc[master.init_date <= latest]
+master['date'] = pd.to_datetime(master['date'])
+master['init_date'] = pd.to_datetime(master['init_date'])
+earliest = datetime.strptime('2021-03-01', '%Y-%m-%d')
+latest = datetime.strptime('2021-07-07', '%Y-%m-%d')
+master = master.loc[master['init_date']>=earliest]
+master = master.loc[master['init_date']<=latest]
 
 #throw out innaccuracies
 inaccuracies = [
-        master.loc[master['ticker'] == 'SPHS'],
-        master.loc[master['ticker'] == 'SNNAQ'],
-        #master.loc[master['ticker'] == 'EMMS'],
-        #master.loc[master['ticker'] == 'HYMCW'],
+        master.loc[master['ticker'] == 'HYMCW'],
+        master.loc[(master['ticker'] == 'NEWP') & (master.init_date == '2021-04-05')],
+        master.loc[master['ticker'] == 'QTRHF'],
+        master.loc[master['ticker'] == 'FAIL'],
+        master.loc[master['ticker'] == 'MUDSW'],
+
 ]
+
 
 for i in inaccuracies:
     master = master.drop(index=i.index)
+
+#correct innaccuracies
+master.loc[
+        (master.ticker == 'BTTR')
+        & (master.init_date == '2021-06-29')
+        & (master.delta == -1),
+        'close'
+] = 7.38
+master.loc[
+        (master.ticker == 'STAF')
+        & (master.init_date == '2021-07-01')
+        & (master.delta == -1),
+        'close'
+] = 3.45
+master.loc[
+        (master.ticker == 'TPST')
+        & (master.init_date == '2021-06-28')
+        & (master.delta == -1),
+        'close'
+] = 15.9
+master.loc[
+        (master.ticker == 'ZIVO')
+        & (master.init_date == '2021-05-28')
+        & (master.delta == -1),
+        'close'
+] = 9.6
 
 
 #build sample DF
@@ -66,14 +92,11 @@ print('building sample DF')
 #start sample with day 0 trade signals
 sample = master.loc[master.delta == 0].copy()
 
-#create rise column
-sample['rise'] = (sample.high - sample.open)/sample.open
-print('Describe rise')
-print(sample.rise.describe())
 
-#create entry column (leave out stocks that don't rise high enough)
-sample = sample.loc[sample.rise >= entry_level]
-sample['entry'] = sample.open * (1+entry_level)
+#create entry price column
+entries = master.loc[master.delta == entry_day][['ticker', 'init_date',entry_time]]
+entries = entries.rename(columns = {entry_time:'entry'})
+sample = sample.merge(entries, how='inner', on=['init_date','ticker'], validate='1:1')
 
 #create returns
 if exit_time == 'open':
@@ -85,20 +108,25 @@ for delta in range(0+adjust, final_day+1):
     day = master.loc[master.delta == delta][['init_date','ticker', exit_time]]
     day = day.rename(columns={exit_time:f'exit_{delta}'})
     sample = sample.merge(day, how='inner', on=['init_date','ticker'], validate='1:1')
-    sample[f'return_{delta}'] = (sample.entry - sample[f'exit_{delta}'])/sample.entry
+    sample[f'return_{delta}'] = (sample[f'exit_{delta}'] - sample.entry)/sample.entry
 
-#calculate lagged opens and closes
-    
-for delta in range(1,5):
-    day = master.loc[master.delta == -delta][['init_date', 'ticker', 'open', 'close', 'volume']]
-    day = day.rename(
-            columns={
-                    'open': f'open_lag{delta}',
-                    'close': f'close_lag{delta}',
-                    'volume': f'volume_lag{delta}',
-                    }
-    )
-    sample = sample.merge(day, how='inner', on=['init_date', 'ticker'], validate='1:1')
+#create gap column
+prev_close = master.loc[master.delta == -1][['ticker', 'init_date', 'close']]
+prev_close = prev_close.rename(columns = {'close': 'prev_close'})
+sample = sample.merge(prev_close, how='inner', on=['init_date','ticker'], validate='1:1')
+sample['gap'] = (sample.entry - sample.prev_close)/sample.prev_close
+
+#create relative range metric over past month
+lags = master.loc[(master.delta < 0) & (master.delta >= -20)][['ticker', 'init_date','high','low']]
+min_low = lags.groupby(['ticker', 'init_date'], as_index=False).low.min()
+min_low = min_low.rename(columns = {'low':'min_low'})
+max_high = lags.groupby(['ticker', 'init_date'], as_index=False).high.max()
+max_high = max_high.rename(columns = {'high': 'max_high'})
+sample = sample.merge(min_low, how='inner', on=['init_date','ticker'], validate='1:1')
+sample = sample.merge(max_high, how='inner', on=['init_date','ticker'], validate='1:1')
+sample['range'] = sample.max_high - sample.min_low
+sample['rel_range'] = sample.range/sample.prev_close
+
 
 #drop any rows with blanks
 print('sample with NA:', sample.shape)
@@ -114,12 +142,13 @@ sample['constant'] = 1.0
 print('backtesting')
 
 #limit sample for analysis
-
-#variation 1 (entry at 0.2)
-#sample = sample.loc[ 
-#            (sample.open <= sample.close_lag1)
-#]
-
+sample = sample.loc[
+        #leave out day with ~120 trades
+        (sample.init_date != '2021-05-11')
+        & (sample.entry <= 10)
+        #& (sample.gap <= -.15)
+        #& (sample.rel_range <= 0.2)
+]
 
 
 
@@ -138,7 +167,7 @@ pc_returns = [np.nan,]
 n_trades = [np.nan,]
 positions = [np.nan,]
 
-at_risk = 0.1
+at_risk = 0.75
 cost = 0.00    
 
 print('initial value:', inv_val[-1])
@@ -321,8 +350,7 @@ exp_ret = win_rate*w_avg - loss_rate*l_avg
 print('expected final ret:', exp_ret)
 kelly = win_rate - (loss_rate)/(w_avg/l_avg)
 print('kelly percentage:', kelly)
-t_dbl = (np.log(2)/np.log(1+(exp_ret*at_risk/(exit_day+1)))*((latest-earliest)/len(ad)))
-print('time to double:', t_dbl.days)
+
 tab_win = summary_col(
         [res_wl, res_wu, res_wmed, res_wols],
         model_names = [f'{l}', f'{h}', 'median', 'average'],
@@ -345,10 +373,10 @@ tab_loss.title = f'Analysis of Gap Losers'
 print(tab_win)
 print(tab_loss)
 
-with open(f'pump_dump_var_2_after_win.tex', 'w') as f:
-    f.write(tab_win.as_latex()[59:-25])
-with open(f'pump_dump_var_2_after_loss.tex', 'w') as f:
-    f.write(tab_loss.as_latex()[62:-25])
+#with open(f'pump_dump_var_2_after_win.tex', 'w') as f:
+#    f.write(tab_win.as_latex()[59:-25])
+#with open(f'pump_dump_var_2_after_loss.tex', 'w') as f:
+#    f.write(tab_loss.as_latex()[62:-25])
 #extended hold analysis
 
 avg_ret = [sample[f'return_{i}'].mean() for i in range(0+adjust,final_day+1)]
@@ -390,9 +418,5 @@ for q in quantiles:
 )
 
 ax2.set(xlabel = 'Holding Day', ylabel = 'Percent return')
-
-
-fig2.savefig('pump_dump_ext_hold_oltc.png')
-#Give back analysis
 
 

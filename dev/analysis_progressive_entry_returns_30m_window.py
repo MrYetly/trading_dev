@@ -26,23 +26,20 @@ entry_day = 0
 entry_level = 0.2
 increment = 0.05
 inc_factor = 2
-max_entries = 1
+max_entries = None
 exit_day = 0
-initial_val = 100000
 #set time slot (remember, 24 hour clock)
 t_start_h = 9
 t_start_m = 30
-t_end_h = 11
+t_end_h = 16
 t_end_m = 0
-#stoploss (still needs refinement)
-stop = True
-stop_loss = 0.05
-stop_win = None
-#set time series bias for bracketed stop loss, must be 'high' or 'low'
-bias = 'high'
-
-
-
+#set exit window option
+exit_window = False
+window = 30
+#set profit target
+target = 0.05
+#don't set checking=True if exit_day=1 and exit_time='open'
+#checking is broken for now
 #calculate average cost
 def avg_cost_pc(n, e, i, f):
     
@@ -60,139 +57,6 @@ def weights(n, f):
         return 1
     
     return sum([f**i for i in range(n)])
-
-
-def find_entry_slot(row, ref_df):
-    '''
-    Find timeslot of earliest entry. Checks that low<=entry<=high.
-    Note: all checks for exits (stoploss, profit taking) commence in 
-    next time slot, so order of high,low in entry time slot does not matter.
-    '''
-    last_entry = row.open * (1+entry_level+increment*(row.n_entries-1))
-    
-    times = ref_df.loc[
-                (ref_df.ticker == row.ticker)
-                & (ref_df.init_date == row.init_date)
-                & (ref_df.high >= last_entry)
-                & (ref_df.low <= last_entry)
-    ]
-    times = times.sort_values('time')
-    earliest = times.iloc[0]
-
-    return earliest.time
-
-def handle_stops(row, ref_df, bias, win = None, loss = None):
-    '''
-    INCOMPLETE
-    
-    Note: bias must equal 'high' or 'low'. If 'low', only o,l,c are used to 
-    make time series of prices. If 'high', only o,h,c are used to make time series
-    of prices.
-    '''
-    ts = ref_df.loc[
-                (ref_df.ticker == row.ticker)
-                & (ref_df.init_date == row.init_date)
-                & (ref_df.time > row.le_time)
-    ]
-    #sort in ascending order of time
-    ts = ts.sort_values('time')
-
-    #create necessary time series
-    if (win == None ) and (loss != None):
-        #stop loss
-        ts = ts[['ticker', 'init_date', 'time','high']]
-        
-        
-        stop_level = row.open * (1+entry_level+increment*(max_entries-1)+loss)
-        
-        
-        losses = ts.loc[ts.high >= stop_level]
-        
-        if losses.shape[0] == 0:
-            return row.exit
-        else:
-            return stop_level
-        
-        
-        
-    elif (win != None) and (loss == None):
-        #stop win
-        ts = ts[['ticker', 'init_date', 'time','low']]
-        
-        
-        #this doesn't trail right
-        stop_level = row.open * (1+entry_level+increment*(row.n_entries-1)-win)
-        
-
-        wins = ts.loc[ts.low <= stop_level]
-        
-        if wins.shape[0] == 0:
-            return row.exit
-        else:
-            return stop_level
-    
-    
-    elif (win != None) and (loss != None):
-        '''
-        Handle whole trade here? Need to possible exit and take profits before final entry
-        '''
-        
-        #bracketed
-        ts = ts[['ticker', 'init_date', 'time','open', bias,'close']]
-        ts = ts.set_index(['ticker', 'init_date', 'time'])
-        #rearrange data and adjust so o,bias,close have theirown times 
-        #note stack pivots the columns, so order must be o,bias,c
-        ts = ts.stack()
-        ts.name = 'price'
-        ts = pd.DataFrame(ts)
-        ts = ts.reset_index()
-        ts = ts.rename(columns = {'level_3':'obc'})
-        ts['adj_time'] = ts.time
-        ts.loc[ts.obc == bias, 'adj_time'] = ts.loc[ts.obc == bias, 'adj_time'] + pd.Timedelta(minutes=2)
-        ts.loc[ts.obc == 'close', 'adj_time'] = ts.loc[ts.obc == 'close', 'adj_time'] + pd.Timedelta(minutes=4)
-        
-        
-        #find earliest stop loss
-        loss_level = row.open * (1+entry_level+increment*(row.n_entries-1)+loss)
-        
-        losses = ts.loc[ts.price >= loss_level]
-        
-        if losses.shape[0] == 0:
-            stop_loss = False
-        else:
-            stop_loss = True
-        
-        #find earliest stop win
-        win_level = row.open * (1+entry_level+increment*(row.n_entries-1)-win)
-        
-        wins = ts.loc[ts.price <= win_level]
-        
-        if wins.shape[0] == 0:
-            stop_win = False
-        else:
-            stop_win = True
-        
-        #pick which losses triggered, if both triggered, pick earliest
-        if (stop_loss == True) and (stop_win == False):
-            return loss_level
-        elif (stop_loss == False) and (stop_win == True):
-            return win_level
-        elif (stop_loss == True) and (stop_win == True):
-            loser = losses.iloc[0]
-            winner = wins.iloc[0]
-            if winner.adj_time > loser.adj_time:
-                return loss_level
-            else:
-                return win_level
-        else:
-            return row.exit
-        
-        
-    else:
-        return print('error: need to specify a stop level')
-    
-
-    
 
 #create new variables
 master = pd.read_csv('../data/high up 20 1 lt prev close lt 2 06072021 agg -253 5.csv')
@@ -256,7 +120,6 @@ t_high = t_high[['ticker', 'init_date', 'high']]
 t_high = t_high.rename(columns={'high':'t_high'})
 sample = sample.merge(t_high, how='inner', on=['init_date','ticker'], validate='1:1')
 
-
 #isolate data that qualifies
 sample = sample.loc[sample.t_high >= sample.open*(1+entry_level)]
 
@@ -276,22 +139,13 @@ sample.n_entries = sample.n_entries.astype('int')
 sample = sample.loc[sample.n_entries>0]
 
 
-#find time of last entry!!!! Construct time series by droping high/lwo (below is time of high)
-sample['le_time'] = sample.apply(lambda x: find_entry_slot(x, intra), axis = 1)
-
 #find exit (exit time as parameter)
 t_exit = intra.init_date + pd.Timedelta(hours=t_end_h, minutes=t_end_m)
 exit_ = intra.loc[intra.time == t_exit][['ticker', 'init_date', 'close']]
 exit_ = exit_.rename(columns={'close':'exit'})
 sample = sample.merge(exit_, how='inner', on=['init_date','ticker'], validate='1:1')
 
-#enforce stop losses
-if stop == True:
     
-    sample.exit = sample.apply(
-            lambda x: handle_stops(x, intra, bias, win = stop_win, loss = stop_loss),
-            axis = 1,
-    )
     
 #calculate average cost
     
@@ -582,6 +436,6 @@ for i in range(1,4):
 #fig4.savefig('prog_entry_lim3_hist_by_entry.pdf')
 
 #number of trades with entries >=3
-gtme = sample.loc[sample.n_entries >= max_entries].shape[0]
+gt3 = sample.loc[sample.n_entries >= 3].shape[0]
 
-print(f'numer of trades with >= {max_entries} entries: ', gtme/sample.shape[0])
+print('numer of trades with >= 3 entries: ', gt3/sample.shape[0])
