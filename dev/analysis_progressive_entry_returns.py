@@ -26,7 +26,7 @@ entry_day = 0
 entry_level = 0.2
 increment = 0.05
 inc_factor = 2
-max_entries = 1
+max_entries = 4
 exit_day = 0
 initial_val = 100000
 #set time slot (remember, 24 hour clock)
@@ -38,6 +38,7 @@ t_end_m = 0
 stop = True
 stop_loss = 0.05
 stop_win = None
+stop_method = 'cost'
 #set time series bias for bracketed stop loss, must be 'high' or 'low'
 bias = 'high'
 
@@ -52,6 +53,7 @@ def avg_cost_pc(n, e, i, f):
     num = sum([(e+i*j)*f**j for j in range(n)])
     denom = sum([f**j for j in range(n)])
     return (1 + num/denom)
+
 
 #calculate weight 
 def weights(n, f):
@@ -81,32 +83,49 @@ def find_entry_slot(row, ref_df):
 
     return earliest.time
 
-def handle_stops(row, ref_df, bias, win = None, loss = None):
+
+
+
+def handle_stops(row, ref_df, bias, win = None, loss = None, method = 'last'):
     '''
     INCOMPLETE
     
     Note: bias must equal 'high' or 'low'. If 'low', only o,l,c are used to 
     make time series of prices. If 'high', only o,h,c are used to make time series
     of prices.
+    
+    method must be either 'last' or 'cost'
     '''
+    
+    
     ts = ref_df.loc[
                 (ref_df.ticker == row.ticker)
                 & (ref_df.init_date == row.init_date)
                 & (ref_df.time > row.le_time)
     ]
+    
+    #shape will be zero if entered in final time slot
+    if ts.shape[0] == 0:
+        return row.exit
+    
     #sort in ascending order of time
     ts = ts.sort_values('time')
-
+    
+    
     #create necessary time series
     if (win == None ) and (loss != None):
         #stop loss
         ts = ts[['ticker', 'init_date', 'time','high']]
         
         
-        stop_level = row.open * (1+entry_level+increment*(max_entries-1)+loss)
-        
-        
+        if method == 'last':
+            stop_level = row.open * (1+entry_level+increment*(max_entries-1)+loss)
+        elif method == 'cost':
+            cost_pc = avg_cost_pc(max_entries, entry_level, increment, inc_factor)
+            stop_level = row.open * (cost_pc*(1+loss))
+
         losses = ts.loc[ts.high >= stop_level]
+
         
         if losses.shape[0] == 0:
             return row.exit
@@ -121,7 +140,11 @@ def handle_stops(row, ref_df, bias, win = None, loss = None):
         
         
         #this doesn't trail right
-        stop_level = row.open * (1+entry_level+increment*(row.n_entries-1)-win)
+        if method == 'last':
+            stop_level = row.open * (1+entry_level+increment*(max_entries-1)-win)
+        elif method == 'cost':
+            avg_pc = avg_cost_pc(row.n_entries, entry_level, increment, inc_factor)
+            stop_level = row.open * (avg_pc*(1-win))
         
 
         wins = ts.loc[ts.low <= stop_level]
@@ -152,8 +175,16 @@ def handle_stops(row, ref_df, bias, win = None, loss = None):
         ts.loc[ts.obc == 'close', 'adj_time'] = ts.loc[ts.obc == 'close', 'adj_time'] + pd.Timedelta(minutes=4)
         
         
+        if method == 'last':
+            loss_level = row.open * (1+entry_level+increment*(row.n_entries-1)+loss)
+            win_level = row.open * (1+entry_level+increment*(row.n_entries-1)-win)
+        elif method == 'cost':
+            avg_pc = avg_cost_pc(row.n_entries, entry_level, increment, inc_factor)
+            
+            loss_level = row.open * (avg_pc*(1+loss))
+            win_level = row.open * (avg_pc*(1-win))
+        
         #find earliest stop loss
-        loss_level = row.open * (1+entry_level+increment*(row.n_entries-1)+loss)
         
         losses = ts.loc[ts.price >= loss_level]
         
@@ -163,7 +194,6 @@ def handle_stops(row, ref_df, bias, win = None, loss = None):
             stop_loss = True
         
         #find earliest stop win
-        win_level = row.open * (1+entry_level+increment*(row.n_entries-1)-win)
         
         wins = ts.loc[ts.price <= win_level]
         
@@ -289,7 +319,7 @@ sample = sample.merge(exit_, how='inner', on=['init_date','ticker'], validate='1
 if stop == True:
     
     sample.exit = sample.apply(
-            lambda x: handle_stops(x, intra, bias, win = stop_win, loss = stop_loss),
+            lambda x: handle_stops(x, intra, bias, win = stop_win, loss = stop_loss, method = stop_method),
             axis = 1,
     )
     
