@@ -172,7 +172,7 @@ pc_returns = [np.nan,]
 n_trades = [np.nan,]
 positions = [np.nan,]
 
-at_risk = 1.0
+at_risk = 0.5
 cost = 0.00    
 
 print('initial value:', inv_val[-1])

@@ -1,0 +1,99 @@
+\documentclass{article}
+
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+
+\graphicspath{{../dev/}}
+
+\title{Strategy Analysis: Progressive Entry II, Stops}
+\author{Ivan Anich}
+
+\begin{document}
+\maketitle
+
+\section{Signal}
+
+The signal analyzed is a rise of 20\% from the open, with a previous close between \$1 and \$2. 
+
+\section{Strategy 1: Unlimited Adds, 5\% Stop Win, Exit at 11}
+
+Weighted epected return 5.0\%
+\begin{table}
+\caption{Performance of Strategy 1: Unlimited Adds, 5\% Stop Win Relative to Average Cost, Exit at 11}
+\center{Overall}
+\\[2ex]
+\input{../dev/prog_entry_stop_win_ovr.tex}
+
+\center{Winners}
+\\[2ex]
+\input{../dev/prog_entry_stop_win_win.tex}
+
+\center{Losers}
+\\[2ex]
+\input{../dev/prog_entry_stop_win_loss.tex}
+\label{tab_strat_1}
+\end{table}
+
+\section{Strategy 2: Max 4 Adds, 5\% Stop Win Relative to Average Cost, Exit at 11} 
+
+weighted expected return: 2.9\%
+
+\begin{table}
+\caption{Performance of Strategy 2: Max 4 Adds, 5\% Stop Win Relative to Average Cost, Exit at 11}
+\center{Overall}
+\\[2ex]
+\input{../dev/prog_entry_stop_win_lim4_ovr.tex}
+
+\center{Winners}
+\\[2ex]
+\input{../dev/prog_entry_stop_win_lim4_win.tex}
+
+\center{Losers}
+\\[2ex]
+\input{../dev/prog_entry_stop_win_lim4_loss.tex}
+\label{tab_strat_2}
+\end{table}
+
+\section{Strat 3: 30 min, 11 final time, unlimited adds, no stops}
+
+Weighted expected return 5.0\%
+
+\begin{table}
+\caption{Performance of Strategy 2: Max 4 Adds, 5\% Stop Win Relative to Average Cost, Exit at 11}
+\center{Overall}
+\\[2ex]
+\input{../dev/prog_entry_w30_stop_win_ovr.tex}
+
+\center{Winners}
+\\[2ex]
+\input{../dev/prog_entry_w30_stop_win_win.tex}
+
+\center{Losers}
+\\[2ex]
+\input{../dev/prog_entry_w30_stop_win_loss.tex}
+\label{tab_strat_3}
+\end{table}
+
+\section{30 min, 11 final time, Stop win, Max 4 Adds }
+
+Weighted expected return 0.8\%.
+
+\begin{table}
+\caption{Performance of Strategy 2: Max 4 Adds, 5\% Stop Win Relative to Average Cost, Exit at 11}
+\center{Overall}
+\\[2ex]
+\input{../dev/prog_entry_w30_stop_win_lim4_ovr.tex}
+
+\center{Winners}
+\\[2ex]
+\input{../dev/prog_entry_w30_stop_win_lim4_win.tex}
+
+\center{Losers}
+\\[2ex]
+\input{../dev/prog_entry_w30_stop_win_lim4_loss.tex}
+\label{tab_strat_4}
+\end{table}
+
+\end{document}

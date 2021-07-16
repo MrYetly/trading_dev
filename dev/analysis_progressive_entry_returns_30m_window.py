@@ -26,20 +26,24 @@ entry_day = 0
 entry_level = 0.2
 increment = 0.05
 inc_factor = 2
-max_entries = None
+max_entries = 4
 exit_day = 0
+initial_val = 100000
 #set time slot (remember, 24 hour clock)
 t_start_h = 9
 t_start_m = 30
-t_end_h = 16
+t_end_h = 11
 t_end_m = 0
-#set exit window option
-exit_window = False
-window = 30
-#set profit target
-target = 0.05
-#don't set checking=True if exit_day=1 and exit_time='open'
-#checking is broken for now
+#stoploss (still needs refinement)
+#Note, must have max_entry if using a stop loss (else keep adding)
+stop_loss = 1
+stop_win = 0.05
+stop_method = 'cost'
+#set time series bias for bracketed stop loss, must be 'win' or 'add'
+bias = 'add'
+
+
+
 #calculate average cost
 def avg_cost_pc(n, e, i, f):
     
@@ -50,6 +54,7 @@ def avg_cost_pc(n, e, i, f):
     denom = sum([f**j for j in range(n)])
     return (1 + num/denom)
 
+
 #calculate weight 
 def weights(n, f):
     
@@ -57,6 +62,165 @@ def weights(n, f):
         return 1
     
     return sum([f**i for i in range(n)])
+
+
+def find_entry_slot(row,n, ref_df):
+    '''
+    Find timeslot of earliest entry. Checks that low<=entry<=high.
+    Note: all checks for exits (stoploss, profit taking) commence in 
+    next time slot, so order of high,low in entry time slot does not matter.
+    '''
+    last_entry = row.open * (1+entry_level+increment*(n-1))
+    
+    times = ref_df.loc[
+                (ref_df.ticker == row.ticker)
+                & (ref_df.init_date == row.init_date)
+                & (ref_df.high >= last_entry)
+                & (ref_df.low <= last_entry)
+    ]
+    times = times.sort_values('time')
+    earliest = times.iloc[0]
+
+    return earliest.time
+
+def handle_stop_loss(row, ref_df, loss, method = 'cost'):
+    '''
+    method must be either 'last' or 'cost'
+    '''
+    #find time series, beginning with time slot after last entry slot
+    ts = ref_df.loc[
+                (ref_df.ticker == row.ticker)
+                & (ref_df.init_date == row.init_date)
+                & (ref_df.time > row.le_time)
+    ]
+    
+    #shape will be zero if entered in final time slot
+    if ts.shape[0] == 0:
+        return row.exit, None
+    
+    #sort in ascending order of time
+    ts = ts.sort_values('time')
+
+    ts = ts[['ticker', 'init_date', 'time','high']]
+    
+    if method == 'last':
+        stop_level = row.open * (1+entry_level+increment*(max_entries-1)+loss)
+    elif method == 'cost':
+        cost_pc = avg_cost_pc(max_entries, entry_level, increment, inc_factor)
+        stop_level = row.open * (cost_pc*(1+loss))
+
+    losses = ts.loc[ts.high >= stop_level]
+
+    
+    if losses.shape[0] == 0:
+        #include tuple for use in handle_stop_bracket()
+        return row.exit, None
+    else:
+        #include tuple for use in handle_stop_bracket()
+        return stop_level, losses.iloc[0].time
+        
+def handle_stop_win(row, ref_df, win, bias = 'win', method = 'cost'):
+    '''
+    Bias indicates if adds are assumed to occur before wins or vice versa
+    '''
+    for n in range(1, row.n_entries+1):
+        
+        ts = ref_df.loc[
+                    (ref_df.ticker == row.ticker)
+                    & (ref_df.init_date == row.init_date)
+        ]
+        #sort in ascending order of time
+        ts = ts.sort_values('time')
+        ts = ts[['ticker', 'init_date', 'time', 'low', 'high']] 
+                
+        #find time slot of entry
+        entry_slot = find_entry_slot(row, n, intra)
+
+        #if next add in same slot, continue to next add
+        if n < row.n_entries:
+            next_add_level = row.open * (1+entry_level+increment*(n))
+            ts_entry = ts.loc[ts.time == entry_slot].iloc[0]
+            if ts_entry.high >= next_add_level:
+                continue
+            
+        #assume action can only be taken in slot after 
+        ts = ts.loc [ts.time > entry_slot]
+                
+        if method == 'last':
+            stop_level = row.open * (1+entry_level+increment*(n-1)-win)
+        elif method == 'cost':
+            avg_pc = avg_cost_pc(n, entry_level, increment, inc_factor)
+            stop_level = row.open * (avg_pc*(1-win))
+        
+        wins = ts.loc[ts.low <= stop_level]
+        
+        
+        if n < row.n_entries:
+            adds = ts.loc[ts.high >= next_add_level]
+        else:
+            adds = pd.DataFrame()
+        
+        #check that a win and/or add exists
+        
+        if adds.shape[0] == 0 and wins.shape[0] == 0:
+            #include tuple for use in handle_stop_bracket()
+            return row.exit, row.n_entries, None 
+        
+        elif adds.shape[0] != 0 and wins.shape[0] == 0:
+            
+            continue
+        
+        elif adds.shape[0] == 0 and wins.shape[0] != 0:
+            #include tuple for use in handle_stop_bracket()
+            return stop_level, n, wins.iloc[0].time
+        
+        else:
+            
+            earliest_win = wins.iloc[0].time
+            next_add = adds.iloc[0].time
+            
+            if earliest_win < next_add:
+                #include tuple for use in handle_stop_bracket()
+                return stop_level, n, wins.iloc[0].time
+            
+            elif earliest_win > next_add:
+        
+                continue
+            
+            else:
+                
+                print(f'bias hit: {row.ticker}, {row.init_date}')
+                if bias == 'win':
+                    #include tuple for use in handle_stop_bracket()
+                    return stop_level, n, wins.iloc[0].time
+                
+                elif bias == 'add':
+                    
+                    continue
+    
+    return row.exit, row.n_entries, None    
+    
+def handle_stop_bracket(row, ref_df, win, loss, bias = 'win', method = 'cost'):           
+    '''
+    If stop loss and stop win occur in same time slot, losses are assumed to occur.
+    '''
+    win_level, n, win_time = handle_stop_win(row, ref_df, win, bias=bias,method=method)
+    loss_level, loss_time = handle_stop_loss(row, ref_df, loss, method=method)
+
+    
+    if win_time == None and loss_time == None:
+        return row.exit, row.n_entries
+    elif win_time == None and loss_time != None:
+        return loss_level, row.n_entries
+    elif win_time != None and loss_time == None:
+        return win_level, n
+    else:
+        if win_time < loss_time:
+            return win_level, n
+        if win_time > loss_time:
+            return loss_level, row.n_entries
+        else:
+            return loss_level, row.n_entries
 
 #create new variables
 master = pd.read_csv('../data/high up 20 1 lt prev close lt 2 06072021 agg -253 5.csv')
@@ -120,6 +284,7 @@ t_high = t_high[['ticker', 'init_date', 'high']]
 t_high = t_high.rename(columns={'high':'t_high'})
 sample = sample.merge(t_high, how='inner', on=['init_date','ticker'], validate='1:1')
 
+
 #isolate data that qualifies
 sample = sample.loc[sample.t_high >= sample.open*(1+entry_level)]
 
@@ -139,12 +304,48 @@ sample.n_entries = sample.n_entries.astype('int')
 sample = sample.loc[sample.n_entries>0]
 
 
+#find time of last entry!!!! Construct time series by droping high/lwo (below is time of high)
+sample['le_time'] = sample.apply(lambda x: find_entry_slot(x, x.n_entries, intra), axis = 1)
+
 #find exit (exit time as parameter)
 t_exit = intra.init_date + pd.Timedelta(hours=t_end_h, minutes=t_end_m)
 exit_ = intra.loc[intra.time == t_exit][['ticker', 'init_date', 'close']]
 exit_ = exit_.rename(columns={'close':'exit'})
 sample = sample.merge(exit_, how='inner', on=['init_date','ticker'], validate='1:1')
 
+#enforce stops 
+
+if (stop_win == None ) and (stop_loss != None):
+    #stop loss
+    sample.exit = sample.apply(
+        lambda x: handle_stop_loss(x, intra, stop_loss, method = stop_method)[0],
+        axis = 1,
+    )        
+    
+elif (stop_win != None) and (stop_loss == None):
+    #stop win
+    sample.exit = sample.apply(
+        lambda x: handle_stop_win(x, intra, stop_win,bias = bias, method = stop_method)[0],
+        axis = 1,
+    )
+    sample.n_entries = sample.apply(
+        lambda x: handle_stop_win(x, intra, stop_win,bias = bias, method = stop_method)[1],
+        axis = 1,
+    )
+
+elif (stop_win != None) and (stop_loss != None):
+    #bracketed stops
+    sample.exit = sample.apply(
+        lambda x: handle_stop_bracket(x, intra, stop_win, stop_loss, bias = bias, method = stop_method)[0],
+        axis = 1,
+    )
+    sample.n_entries = sample.apply(
+        lambda x: handle_stop_bracket(x, intra, stop_win, stop_loss, bias = bias, method = stop_method)[1],
+        axis = 1,
+    ) 
+
+    
+    
     
     
 #calculate average cost
@@ -283,151 +484,151 @@ print('\n', tab_loss)
 #    f.write(tab_loss.as_latex()[58:-25])
 
 #zinger figure for weighted expected returns vs max entry
-
-max_list = list(range(1, sample.n_entries.max()+1))
-output = pd.DataFrame()
-for e in max_list:
-    
-    e_df = sample.copy()
-    
-    #restrict by max entries allowed
-    limit_break = e_df.loc[e_df.n_entries > e]
-    e_df.loc[limit_break.index, 'n_entries'] = e
-    
-    #recalculate average cost
-    
-    e_df['avg_cost_pc'] = e_df.apply(
-            lambda x: avg_cost_pc(x.n_entries, entry_level, increment, inc_factor),
-            axis=1,
-    )
-    
-    e_df['avg_cost'] = e_df.avg_cost_pc * e_df.open
-
-    #recalculate weights
-    e_df['weight'] = e_df.apply(
-        lambda x: weights(x.n_entries, inc_factor),
-        axis = 1,
-    )
-    
-    #recalculate returns
-
-    e_df['pc_return'] = (e_df.avg_cost - e_df.exit)/e_df.avg_cost
-
-    #calculate expected return
-    
-    e_exp_ret = e_df.pc_return.mean()
-
-    #calculate weighted expected return
-    e_avg = ((e_df.pc_return * e_df.weight)/sum(e_df.weight)).sum()
-    
-    wins = e_df.loc[e_df.pc_return > 0]
-    losses = e_df.loc[e_df.pc_return < 0]
-    
-    #calculate win rate
-
-    e_win_rate = wins.shape[0]/e_df.shape[0]
-    
-    #calculate average win
-    
-    e_w_avg = wins.pc_return.mean()
-    
-    #calculate average loss 
-    
-    e_l_avg = losses.pc_return.mean()
-        
-    row = pd.Series(
-            {
-                    'max_entry': e,
-                    'exp_ret': e_exp_ret,
-                    'w_exp_ret': e_avg,
-                    'win_rate': e_win_rate,
-                    'avg_win': e_w_avg,
-                    'avg_loss': e_l_avg,
-            },
-    )
-    
-    output = output.append(row, ignore_index=True)
-
-fig, ax = plt.subplots(3, 1, figsize = (8,15))
-
-output.plot(
-        x = 'max_entry',
-        y = 'exp_ret',
-        ax=ax[0],
-        title = 'Expected Returns by Max Number of Entries',
-        ylim = (-.05, output.exp_ret.max() + 0.05),
-        grid = True,
-)
-ax[0].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
-
-output.plot(
-        x = 'max_entry',
-        y = 'win_rate',
-        ax=ax[1],
-        title = 'Win Rate by Max Number of Entries',
-        ylim = (0, 1),
-        grid = True,
-)
-ax[1].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Win Rate')
-
-output.plot(
-        x = 'max_entry',
-        y = ['avg_win', 'avg_loss'],
-        ax=ax[2],
-        title = 'Average Win and Average Loss by Max Number of Entries',
-        ylim = (output.avg_loss.min()-.05, output.avg_win.max() + 0.05),
-        grid = True,
-)
-ax[2].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
+#
+#max_list = list(range(1, sample.n_entries.max()+1))
+#output = pd.DataFrame()
+#for e in max_list:
+#    
+#    e_df = sample.copy()
+#    
+#    #restrict by max entries allowed
+#    limit_break = e_df.loc[e_df.n_entries > e]
+#    e_df.loc[limit_break.index, 'n_entries'] = e
+#    
+#    #recalculate average cost
+#    
+#    e_df['avg_cost_pc'] = e_df.apply(
+#            lambda x: avg_cost_pc(x.n_entries, entry_level, increment, inc_factor),
+#            axis=1,
+#    )
+#    
+#    e_df['avg_cost'] = e_df.avg_cost_pc * e_df.open
+#
+#    #recalculate weights
+#    e_df['weight'] = e_df.apply(
+#        lambda x: weights(x.n_entries, inc_factor),
+#        axis = 1,
+#    )
+#    
+#    #recalculate returns
+#
+#    e_df['pc_return'] = (e_df.avg_cost - e_df.exit)/e_df.avg_cost
+#
+#    #calculate expected return
+#    
+#    e_exp_ret = e_df.pc_return.mean()
+#
+#    #calculate weighted expected return
+#    e_avg = ((e_df.pc_return * e_df.weight)/sum(e_df.weight)).sum()
+#    
+#    wins = e_df.loc[e_df.pc_return > 0]
+#    losses = e_df.loc[e_df.pc_return < 0]
+#    
+#    #calculate win rate
+#
+#    e_win_rate = wins.shape[0]/e_df.shape[0]
+#    
+#    #calculate average win
+#    
+#    e_w_avg = wins.pc_return.mean()
+#    
+#    #calculate average loss 
+#    
+#    e_l_avg = losses.pc_return.mean()
+#        
+#    row = pd.Series(
+#            {
+#                    'max_entry': e,
+#                    'exp_ret': e_exp_ret,
+#                    'w_exp_ret': e_avg,
+#                    'win_rate': e_win_rate,
+#                    'avg_win': e_w_avg,
+#                    'avg_loss': e_l_avg,
+#            },
+#    )
+#    
+#    output = output.append(row, ignore_index=True)
+#
+#fig, ax = plt.subplots(3, 1, figsize = (8,15))
+#
+#output.plot(
+#        x = 'max_entry',
+#        y = 'exp_ret',
+#        ax=ax[0],
+#        title = 'Expected Returns by Max Number of Entries',
+#        ylim = (-.05, output.exp_ret.max() + 0.05),
+#        grid = True,
+#)
+#ax[0].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
+#
+#output.plot(
+#        x = 'max_entry',
+#        y = 'win_rate',
+#        ax=ax[1],
+#        title = 'Win Rate by Max Number of Entries',
+#        ylim = (0, 1),
+#        grid = True,
+#)
+#ax[1].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Win Rate')
+#
+#output.plot(
+#        x = 'max_entry',
+#        y = ['avg_win', 'avg_loss'],
+#        ax=ax[2],
+#        title = 'Average Win and Average Loss by Max Number of Entries',
+#        ylim = (output.avg_loss.min()-.05, output.avg_win.max() + 0.05),
+#        grid = True,
+#)
+#ax[2].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
 
 #for i in range(3):
 #    ax[i].set_xticks(list(range(1,sample.n_entries.max()+1)))
 
 
-fig2, ax2 = plt.subplots(figsize = (8,5))
-
-sample.hist(
-        column = 'n_entries',
-        ax = ax2,
-        bins = sample.n_entries.max(),
-)
-
-ax2.set(xlabel = 'Amount of Entries', ylabel = 'Count')
-#ax2.set_xticks(list(range(1,sample.n_entries.max()+1)))
-ax2.set_title('Histogram of Trades by Number of Entries')
-
-fig3, ax3 = plt.subplots(figsize = (8,5))
-
-output.plot(
-        x = 'max_entry',
-        y = 'w_exp_ret',
-        ax=ax3,
-        title = 'Weighted Expected Returns by Max Number of Entries',
-        ylim = (-.05, output.w_exp_ret.max() + 0.05),
-        grid = True,
-)
-ax3.set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
-
-#3 part histogram
-
-fig4, ax4 = plt.subplots(3, 1, figsize = (8, 15))
-
-for i in range(1,4):
-    
-    df = sample.loc[sample.n_entries == i]
-    
-    df.hist(
-        column = 'pc_return',
-        ax = ax4[i-1],
-        bins = np.arange(-0.5, 0.6, 0.1),
-        )
-    
-    ax4[i-1].set(xlabel = 'Percent Return', ylabel = 'Count')
-    ax4[i-1].set_title(f'Histogram of Percent Return for {i} Entries')
-    ax4[i-1].set_xticks(np.arange(-0.5, 0.6, 0.1))
-    ax4[i-1].set_ylim(0,)
-
-
+#fig2, ax2 = plt.subplots(figsize = (8,5))
+#
+#sample.hist(
+#        column = 'n_entries',
+#        ax = ax2,
+#        bins = sample.n_entries.max(),
+#)
+#
+#ax2.set(xlabel = 'Amount of Entries', ylabel = 'Count')
+##ax2.set_xticks(list(range(1,sample.n_entries.max()+1)))
+#ax2.set_title('Histogram of Trades by Number of Entries')
+#
+#fig3, ax3 = plt.subplots(figsize = (8,5))
+#
+#output.plot(
+#        x = 'max_entry',
+#        y = 'w_exp_ret',
+#        ax=ax3,
+#        title = 'Weighted Expected Returns by Max Number of Entries',
+#        ylim = (-.05, output.w_exp_ret.max() + 0.05),
+#        grid = True,
+#)
+#ax3.set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
+#
+##3 part histogram
+#
+#fig4, ax4 = plt.subplots(3, 1, figsize = (8, 15))
+#
+#for i in range(1,4):
+#    
+#    df = sample.loc[sample.n_entries == i]
+#    
+#    df.hist(
+#        column = 'pc_return',
+#        ax = ax4[i-1],
+#        bins = np.arange(-0.5, 0.6, 0.1),
+#        )
+#    
+#    ax4[i-1].set(xlabel = 'Percent Return', ylabel = 'Count')
+#    ax4[i-1].set_title(f'Histogram of Percent Return for {i} Entries')
+#    ax4[i-1].set_xticks(np.arange(-0.5, 0.6, 0.1))
+#    ax4[i-1].set_ylim(0,)
+#
+#
 
 
 #fig.savefig('prog_entry_3plot.pdf')
@@ -436,6 +637,6 @@ for i in range(1,4):
 #fig4.savefig('prog_entry_lim3_hist_by_entry.pdf')
 
 #number of trades with entries >=3
-gt3 = sample.loc[sample.n_entries >= 3].shape[0]
+gtme = sample.loc[sample.n_entries >= max_entries].shape[0]
 
-print('numer of trades with >= 3 entries: ', gt3/sample.shape[0])
+print(f'numer of trades with >= {max_entries} entries: ', gtme/sample.shape[0])
