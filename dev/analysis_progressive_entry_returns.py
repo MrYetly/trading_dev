@@ -26,7 +26,7 @@ entry_day = 0
 entry_level = 0.2
 increment = 0.05
 inc_factor = 2
-max_entries = 4
+max_entries = 3
 exit_day = 0
 initial_val = 100000
 #set time slot (remember, 24 hour clock)
@@ -538,138 +538,138 @@ print('\n Weighted expected return: ', weight_avg)
 print('\n', tab_win)
 print('\n', tab_loss)
 
-with open(f'prog_entry_w30_stop_win_lim4_ovr.tex', 'w') as f:
-    f.write(tab_ovr.as_latex()[56:-25])
-with open(f'prog_entry_w30_stop_win_lim4_win.tex', 'w') as f:
-    f.write(tab_win.as_latex()[59:-25])
-with open(f'prog_entry_w30_stop_win_lim4_loss.tex', 'w') as f:
-    f.write(tab_loss.as_latex()[58:-25])
+#with open(f'prog_entry_w30_stop_win_lim3_ovr.tex', 'w') as f:
+#    f.write(tab_ovr.as_latex()[56:-25])
+#with open(f'prog_entry_w30_stop_win_lim3_win.tex', 'w') as f:
+#    f.write(tab_win.as_latex()[59:-25])
+#with open(f'prog_entry_w30_stop_win_lim3_loss.tex', 'w') as f:
+#    f.write(tab_loss.as_latex()[58:-25])
 
 #zinger figure for weighted expected returns vs max entry
-#
-#max_list = list(range(1, sample.n_entries.max()+1))
-#output = pd.DataFrame()
-#for e in max_list:
-#    
-#    e_df = sample.copy()
-#    
-#    #restrict by max entries allowed
-#    limit_break = e_df.loc[e_df.n_entries > e]
-#    e_df.loc[limit_break.index, 'n_entries'] = e
-#    
-#    #recalculate average cost
-#    
-#    e_df['avg_cost_pc'] = e_df.apply(
-#            lambda x: avg_cost_pc(x.n_entries, entry_level, increment, inc_factor),
-#            axis=1,
-#    )
-#    
-#    e_df['avg_cost'] = e_df.avg_cost_pc * e_df.open
-#
-#    #recalculate weights
-#    e_df['weight'] = e_df.apply(
-#        lambda x: weights(x.n_entries, inc_factor),
-#        axis = 1,
-#    )
-#    
-#    #recalculate returns
-#
-#    e_df['pc_return'] = (e_df.avg_cost - e_df.exit)/e_df.avg_cost
-#
-#    #calculate expected return
-#    
-#    e_exp_ret = e_df.pc_return.mean()
-#
-#    #calculate weighted expected return
-#    e_avg = ((e_df.pc_return * e_df.weight)/sum(e_df.weight)).sum()
-#    
-#    wins = e_df.loc[e_df.pc_return > 0]
-#    losses = e_df.loc[e_df.pc_return < 0]
-#    
-#    #calculate win rate
-#
-#    e_win_rate = wins.shape[0]/e_df.shape[0]
-#    
-#    #calculate average win
-#    
-#    e_w_avg = wins.pc_return.mean()
-#    
-#    #calculate average loss 
-#    
-#    e_l_avg = losses.pc_return.mean()
-#        
-#    row = pd.Series(
-#            {
-#                    'max_entry': e,
-#                    'exp_ret': e_exp_ret,
-#                    'w_exp_ret': e_avg,
-#                    'win_rate': e_win_rate,
-#                    'avg_win': e_w_avg,
-#                    'avg_loss': e_l_avg,
-#            },
-#    )
-#    
-#    output = output.append(row, ignore_index=True)
-#
-#fig, ax = plt.subplots(3, 1, figsize = (8,15))
-#
-#output.plot(
-#        x = 'max_entry',
-#        y = 'exp_ret',
-#        ax=ax[0],
-#        title = 'Expected Returns by Max Number of Entries',
-#        ylim = (-.05, output.exp_ret.max() + 0.05),
-#        grid = True,
-#)
-#ax[0].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
-#
-#output.plot(
-#        x = 'max_entry',
-#        y = 'win_rate',
-#        ax=ax[1],
-#        title = 'Win Rate by Max Number of Entries',
-#        ylim = (0, 1),
-#        grid = True,
-#)
-#ax[1].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Win Rate')
-#
-#output.plot(
-#        x = 'max_entry',
-#        y = ['avg_win', 'avg_loss'],
-#        ax=ax[2],
-#        title = 'Average Win and Average Loss by Max Number of Entries',
-#        ylim = (output.avg_loss.min()-.05, output.avg_win.max() + 0.05),
-#        grid = True,
-#)
-#ax[2].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
-#
-#for i in range(3):
-#    ax[i].set_xticks(list(range(1,sample.n_entries.max()+1)))
-#
-#
-#fig2, ax2 = plt.subplots(figsize = (8,5))
-#
-#sample.hist(
-#        column = 'n_entries',
-#        ax = ax2,
-#        bins = sample.n_entries.max(),
-#)
-#
-#ax2.set(xlabel = 'Amount of Entries', ylabel = 'Count')
-##ax2.set_xticks(list(range(1,sample.n_entries.max()+1)))
-#ax2.set_title('Histogram of Trades by Number of Entries')
-#
-#fig3, ax3 = plt.subplots(figsize = (8,5))
-#
-#output.plot(
-#        x = 'max_entry',
-#        y = 'w_exp_ret',
-#        ax=ax3,
-#        title = 'Weighted Expected Returns by Max Number of Entries',
-#        ylim = (-.05, output.w_exp_ret.max() + 0.05),
-#        grid = True,
-#)
-#ax3.set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
+
+max_list = list(range(1, sample.n_entries.max()+1))
+output = pd.DataFrame()
+for e in max_list:
+    
+    e_df = sample.copy()
+    
+    #restrict by max entries allowed
+    limit_break = e_df.loc[e_df.n_entries > e]
+    e_df.loc[limit_break.index, 'n_entries'] = e
+    
+    #recalculate average cost
+    
+    e_df['avg_cost_pc'] = e_df.apply(
+            lambda x: avg_cost_pc(x.n_entries, entry_level, increment, inc_factor),
+            axis=1,
+    )
+    
+    e_df['avg_cost'] = e_df.avg_cost_pc * e_df.open
+
+    #recalculate weights
+    e_df['weight'] = e_df.apply(
+        lambda x: weights(x.n_entries, inc_factor),
+        axis = 1,
+    )
+    
+    #recalculate returns
+
+    e_df['pc_return'] = (e_df.avg_cost - e_df.exit)/e_df.avg_cost
+
+    #calculate expected return
+    
+    e_exp_ret = e_df.pc_return.mean()
+
+    #calculate weighted expected return
+    e_avg = ((e_df.pc_return * e_df.weight)/sum(e_df.weight)).sum()
+    
+    wins = e_df.loc[e_df.pc_return > 0]
+    losses = e_df.loc[e_df.pc_return < 0]
+    
+    #calculate win rate
+
+    e_win_rate = wins.shape[0]/e_df.shape[0]
+    
+    #calculate average win
+    
+    e_w_avg = wins.pc_return.mean()
+    
+    #calculate average loss 
+    
+    e_l_avg = losses.pc_return.mean()
+        
+    row = pd.Series(
+            {
+                    'max_entry': e,
+                    'exp_ret': e_exp_ret,
+                    'w_exp_ret': e_avg,
+                    'win_rate': e_win_rate,
+                    'avg_win': e_w_avg,
+                    'avg_loss': e_l_avg,
+            },
+    )
+    
+    output = output.append(row, ignore_index=True)
+
+fig, ax = plt.subplots(3, 1, figsize = (8,15))
+
+output.plot(
+        x = 'max_entry',
+        y = 'exp_ret',
+        ax=ax[0],
+        title = 'Expected Returns by Max Number of Entries',
+        ylim = (-.05, output.exp_ret.max() + 0.05),
+        grid = True,
+)
+ax[0].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
+
+output.plot(
+        x = 'max_entry',
+        y = 'win_rate',
+        ax=ax[1],
+        title = 'Win Rate by Max Number of Entries',
+        ylim = (0, 1),
+        grid = True,
+)
+ax[1].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Win Rate')
+
+output.plot(
+        x = 'max_entry',
+        y = ['avg_win', 'avg_loss'],
+        ax=ax[2],
+        title = 'Average Win and Average Loss by Max Number of Entries',
+        ylim = (output.avg_loss.min()-.05, output.avg_win.max() + 0.05),
+        grid = True,
+)
+ax[2].set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
+
+for i in range(3):
+    ax[i].set_xticks(list(range(1,sample.n_entries.max()+1)))
+
+
+fig2, ax2 = plt.subplots(figsize = (8,5))
+
+sample.hist(
+        column = 'n_entries',
+        ax = ax2,
+        bins = sample.n_entries.max(),
+)
+
+ax2.set(xlabel = 'Amount of Entries', ylabel = 'Count')
+#ax2.set_xticks(list(range(1,sample.n_entries.max()+1)))
+ax2.set_title('Histogram of Trades by Number of Entries')
+
+fig3, ax3 = plt.subplots(figsize = (8,5))
+
+output.plot(
+        x = 'max_entry',
+        y = 'w_exp_ret',
+        ax=ax3,
+        title = 'Weighted Expected Returns by Max Number of Entries',
+        ylim = (-.05, output.w_exp_ret.max() + 0.05),
+        grid = True,
+)
+ax3.set(xlabel = 'Max Number of Entries Allowed', ylabel = 'Precent Return')
 
 ##3 part histogram
 #
@@ -693,8 +693,8 @@ with open(f'prog_entry_w30_stop_win_lim4_loss.tex', 'w') as f:
 #
 
 
-#fig.savefig('prog_entry_3plot.pdf')
-#fig2.savefig('prog_entry_exit4_hist.pdf')
+#fig.savefig('prog_entry_exit4_3plot.pdf')
+#fig2.savefig('prog_entry_w30_stop_win_lim3_hist.pdf')
 #fig3.savefig('prog_entry_exit4_w_avg.pdf')
 #fig4.savefig('prog_entry_lim3_hist_by_entry.pdf')
 

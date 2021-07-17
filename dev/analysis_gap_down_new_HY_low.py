@@ -145,7 +145,7 @@ print('backtesting')
 sample = sample.loc[
         #leave out day with ~120 trades
         (sample.init_date != '2021-05-11')
-        & (sample.entry <= 10)
+        #& (sample.entry <= 10)
         #& (sample.gap <= -.15)
         #& (sample.rel_range <= 0.2)
 ]

@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.4.16)  15 JUL 2021 20:05
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2018.4.16)  16 JUL 2021 08:58
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -189,39 +189,67 @@ LaTeX Font Info:    External font `cmex10' loaded for size
 LaTeX Font Info:    External font `cmex10' loaded for size
 (Font)              <5> on input line 1.
 ) (../dev/prog_entry_stop_win_win.tex)
-(../dev/prog_entry_stop_win_loss.tex) (../dev/prog_entry_stop_win_lim4_ovr.tex)
-(../dev/prog_entry_stop_win_lim4_win.tex)
-(../dev/prog_entry_stop_win_lim4_loss.tex)
-(../dev/prog_entry_w30_stop_win_ovr.tex)
+(../dev/prog_entry_stop_win_loss.tex) [1
+
+{/usr/local/texlive/2018/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] [2]
+<../dev/prog_entry_stop_win_hist.pdf, id=16, 578.16pt x 361.35pt>
+File: ../dev/prog_entry_stop_win_hist.pdf Graphic file (type pdf)
+<use ../dev/prog_entry_stop_win_hist.pdf>
+Package pdftex.def Info: ../dev/prog_entry_stop_win_hist.pdf  used on input lin
+e 48.
+(pdftex.def)             Requested size: 345.0pt x 215.6207pt.
+ [3 <../dev/prog_entry_stop_win_hist.pdf>]
+(../dev/prog_entry_stop_win_lim3_ovr.tex)
+(../dev/prog_entry_stop_win_lim3_win.tex)
+(../dev/prog_entry_stop_win_lim3_loss.tex)
+<../dev/prog_entry_stop_win_lim3_hist.pdf, id=55, 578.16pt x 361.35pt>
+File: ../dev/prog_entry_stop_win_lim3_hist.pdf Graphic file (type pdf)
+<use ../dev/prog_entry_stop_win_lim3_hist.pdf>
+Package pdftex.def Info: ../dev/prog_entry_stop_win_lim3_hist.pdf  used on inpu
+t line 79.
+(pdftex.def)             Requested size: 345.0pt x 215.6207pt.
+ [4] [5 <../dev/prog_entry_stop_win_lim3_hist.pdf>] (../dev/prog_entry_w30_stop
+_win_ovr.tex)
 (../dev/prog_entry_w30_stop_win_win.tex)
 (../dev/prog_entry_w30_stop_win_loss.tex)
-(../dev/prog_entry_w30_stop_win_lim4_ovr.tex)
-(../dev/prog_entry_w30_stop_win_lim4_win.tex)
-(../dev/prog_entry_w30_stop_win_lim4_loss.tex) [1
-
-{/usr/local/texlive/2018/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] [2] [3]
- [4] [5]
-(./progressive_entry_stops.aux)
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
- ) 
+<../dev/prog_entry_w30_stop_win_hist.pdf, id=97, 578.16pt x 361.35pt>
+File: ../dev/prog_entry_w30_stop_win_hist.pdf Graphic file (type pdf)
+<use ../dev/prog_entry_w30_stop_win_hist.pdf>
+Package pdftex.def Info: ../dev/prog_entry_w30_stop_win_hist.pdf  used on input
+ line 111.
+(pdftex.def)             Requested size: 345.0pt x 215.6207pt.
+ [6] [7 <../dev/prog_entry_w30_stop_win_hist.pdf>] (../dev/prog_entry_w30_stop_
+win_lim3_ovr.tex)
+(../dev/prog_entry_w30_stop_win_lim3_win.tex)
+(../dev/prog_entry_w30_stop_win_lim3_loss.tex)
+<../dev/prog_entry_w30_stop_win_lim3_hist.pdf, id=139, 578.16pt x 361.35pt>
+File: ../dev/prog_entry_w30_stop_win_lim3_hist.pdf Graphic file (type pdf)
+<use ../dev/prog_entry_w30_stop_win_lim3_hist.pdf>
+Package pdftex.def Info: ../dev/prog_entry_w30_stop_win_lim3_hist.pdf  used on 
+input line 143.
+(pdftex.def)             Requested size: 345.0pt x 215.6207pt.
+ [8] [9 <../dev/prog_entry_w30_stop_win_lim3_hist.pdf>] (./progressive_entry_st
+ops.aux) ) 
 Here is how much of TeX's memory you used:
- 2650 strings out of 492649
- 43174 string characters out of 6129622
- 121304 words of memory out of 5000000
- 6495 multiletter control sequences out of 15000+600000
- 7280 words of font info for 26 fonts, out of 8000000 for 9000
+ 2679 strings out of 492649
+ 44224 string characters out of 6129622
+ 110352 words of memory out of 5000000
+ 6518 multiletter control sequences out of 15000+600000
+ 7934 words of font info for 28 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 41i,8n,39p,290b,251s stack positions out of 5000i,500n,10000p,200000b,80000s
-</usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb
-></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><
-/usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></u
-sr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb>
-Output written on progressive_entry_stops.pdf (5 pages, 60412 bytes).
+ 41i,7n,39p,1052b,288s stack positions out of 5000i,500n,10000p,200000b,80000s
+</usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cm
+bx10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmb
+x12.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi
+10.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10
+.pfb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.p
+fb></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb
+></usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb>
+</usr/local/texlive/2018/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb>
+Output written on progressive_entry_stops.pdf (9 pages, 144018 bytes).
 PDF statistics:
- 36 PDF objects out of 1000 (max. 8388607)
- 24 compressed objects within 1 object stream
+ 208 PDF objects out of 1000 (max. 8388607)
+ 70 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 21 words of extra memory for PDF output out of 10000 (max. 10000000)
 
