@@ -4,11 +4,11 @@ from datetime import datetime
 import time
 
 ###organize initial data
-data_path = '../data/gap up 25 12302020/'
+data_path = '../data/gap d 15 2021-02-22/'
 init_data = {}
 filenames = os.listdir(data_path)
 unique = set()
-unique_limit = 500000
+unique_limit = 500
 for f in filenames:
     if f[-4:] == '.csv':
         d = f[-4-8:-4]
@@ -102,4 +102,4 @@ for ticker, d_list in init_data.items():
                 price_data = price_data.append(row, ignore_index=True,)
 
 print(price_data)
-price_data.to_csv('../data/gap u 25 12302020 agg -253 5.csv')
+price_data.to_csv('../data/gap d 15 2021-02-22 agg -253 5.csv')

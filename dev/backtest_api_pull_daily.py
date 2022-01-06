@@ -4,46 +4,58 @@ from datetime import datetime
 import time
 
 ###organize initial data
-data_path = '../data/gap down new HY low 07092021/'
-init_data = {}
+data_path = '../data/up 20 OTD_2021-10-08/'
+init_data = pd.DataFrame() 
 filenames = os.listdir(data_path)
 unique = set()
-unique_limit = 500
+unique_limit = 490
+check = False 
+
+#create df to check against previous partial download
+if check == True:
+    past_path = '../data/4x_up_10_otm_2021-06-30 agg -253 20.csv'
+    past_df = pd.read_csv(past_path)
+    past_df = past_df.append(pd.read_csv('../data/4x_up_10_otm_2021-06-30 agg -253 20 part 2.csv'))
+    past_check = past_df.loc[past_df.delta == 0][['ticker', 'init date', 'delta']]
+
+#get all (ticker, init date) combinations, put into dataframe
 for f in filenames:
     if f[-4:] == '.csv':
-        d = f[-4-8:-4]
-        d = f'{d[-4:]}-{d[:2]}-{d[2:4]}'
+        d = f[-4-10:-4]
+        #d = f'{d[-4:]}-{d[:2]}-{d[2:4]}'
+            
         df = pd.read_csv(data_path+f)
         tickers = df['Symbol']
         tickers = tickers.dropna()
         tickers = list(tickers)
         
-        #check max unique tickers before adding
-        t = set(tickers)
-        u = unique | t
-        if len(u) > unique_limit:
-            break
-        else:
-            for ticker in tickers:
-                if init_data.get(ticker) == None:
-                    init_data[ticker] = [d,]
-                else:
-                    init_data[ticker].append(d)
-            unique = u
+        for ticker in tickers:
+            init_data = init_data.append({'ticker':ticker, 'init date':d}, ignore_index = True)
+init_data = init_data.drop_duplicates()
 
-count = 0
-for ticker, d_list in init_data.items():
-    count += len(d_list)
+#drop rows already downloaded
+if check  == True:
+    init_data = init_data.merge(past_check, how = 'left', on = ['ticker', 'init date'])
+    init_data = init_data.loc[init_data.delta != 0]
+    init_data = init_data.drop('delta', axis = 1)
 
-print('total "trades:"',count, 'unique tickers:', len(unique), 'unique limit:', unique_limit)
+#enforece unique_limit such that unique tickers  <= unique limit
+unique_tickers = init_data['ticker'].drop_duplicates()
+unique_tickers = pd.DataFrame(unique_tickers)
+unique_tickers = unique_tickers.reset_index()
+if unique_tickers.shape[0] > unique_limit:
+    unique_tickers = unique_tickers.loc[:unique_limit-1]
+unique_tickers['keep'] = True
+init_data = init_data.merge(unique_tickers, how = 'left', on = 'ticker')
+init_data = init_data.loc[init_data.keep == 1]
+init_data = init_data.drop(['keep','index'], axis = 1)
 
+print('total "trades:"',init_data.shape[0], 'unique tickers:', unique_tickers.shape[0], 'unique limit:', unique_limit)
 
-###pull time series data and aggregate
-
-count = 0
+count=0
 #max_count = 5
 price_data = pd.DataFrame()
-for ticker, d_list in init_data.items():
+for i, ticker in unique_tickers['ticker'].items():
     
     count += 1
     print(count)
@@ -55,7 +67,7 @@ for ticker, d_list in init_data.items():
     if count % 5 == 1 and count != 1:
         print('waiting...')
         time.sleep(60)
-    
+
     #pull time series
     price_url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={ticker}&outputsize=full&apikey=HJYREXCXYL2536T7'
     try:
@@ -66,8 +78,11 @@ for ticker, d_list in init_data.items():
         print(f'Failed to pull prices for {ticker}!')
         continue
     
+    #get ticker sub df
+    sub_df = init_data.loc[init_data.ticker == ticker]
+
     #process days
-    for d_o in d_list:
+    for j, d_o in sub_df['init date'].items():
 
         #set inital date
         d_o = datetime.strptime(d_o, '%Y-%m-%d').date()
@@ -84,7 +99,7 @@ for ticker, d_list in init_data.items():
             lags = list(range(-253,1))
 
             #set number of days ahead
-            ahead = list(range(1,6))
+            ahead = list(range(1,21))
             date_range = lags+ahead
             
             for d in date_range:
@@ -111,4 +126,5 @@ for ticker, d_list in init_data.items():
             continue
 
 print(price_data)
-price_data.to_csv('../data/gap down new HY low 07092021 agg -253 5.csv')
+price_data.to_csv('../data/up 20 OTD_2021-10-08 agg -253 5.csv')
+
