@@ -1,0 +1,1 @@
+The 'dev' folder of this repo contains various tools that I use to trade. Auto_trade.py is a script for automatically executing a technical trading strategy. The script uses Selenium and BeautifulSoup to scrape a screener to stocks to buy, that then sends a purchase request to Alpaca using the alapaca library.
