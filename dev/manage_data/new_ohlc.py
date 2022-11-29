@@ -3,20 +3,28 @@ from time import perf_counter, sleep
 import finnhub
 
 ##############################################################
+#get secrets
+##############################################################
+
+secrets = pd.read_csv('../dt_secrets.csv')
+
+##############################################################
 #update the table of time series for all tickers in a given time window
 ##############################################################
 
 #Declare window to draw data for
-init_date = '2021-01-06'
-end_date = '2022-01-04'
+init_date = '2022-05-24'
+end_date = '2022-11-28'
 
 #Get all tickers from tickers table
-database_rel_path = '../data/database/'
+database_rel_path = '../../data/database/'
 tickers = pd.read_csv(
         database_rel_path+'tickers.csv', 
         index_col='Unnamed: 0',
 )
-tickers = tickers.rename(columns={'0':'ticker'})
+tickers = tickers.rename(columns={'Ticker':'ticker'})
+#index must not skip numbers for 'limit wait' code to work, so I reset index to be sure
+tickers.reset_index(drop=True, inplace = True)
 
 #set initial and end timestamps
 init_t = pd.to_datetime(init_date)
@@ -28,12 +36,11 @@ end_t = int(end_t.value / 10**9)
 new_data = pd.DataFrame()
 
 #instantiate API client
-finnhub_client = finnhub.Client(api_key="c5mo56qad3iam7tung4g")
+finnhub_client = finnhub.Client(api_key=secrets.loc[secrets.key=='finnhub_key'].value)
 
 #set reference time
 ref_time = perf_counter()
 for i, row in tickers.iterrows():
-
     ticker = row.ticker 
     print(f'{i} out of {tickers.shape[0]}')
 
@@ -56,13 +63,13 @@ for i, row in tickers.iterrows():
         entry = pd.DataFrame(entry)
         entry.t = pd.to_datetime(entry.t, unit='s')
         entry['ticker']=ticker
-        new_data = new_data.append(entry, ignore_index = True, )
+        new_data = pd.concat([new_data, entry], ignore_index=True)
     except Exception as e:
         print(f'Failed to pull data for {ticker}')
         print(e)
         continue
 
 print(new_data)
-new_data.to_csv(f'../data/all of finviz/ohlc_{init_date}_{end_date}.csv')
+new_data.to_csv(f'../../data/all of finviz/ohlc_{init_date}_{end_date}.csv')
 
 

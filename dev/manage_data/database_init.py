@@ -1,5 +1,13 @@
 import pandas as pd
 
+protect = input('ARE YOU SURE YOU WANT TO RUN THIS. WILL RESET DATABASE:')
+
+
+pw = 'BHADKEA44'
+
+if protect != pw:
+    exit()
+
 master_rel_path = '../data/batch pulls/'
 master_dates = [
         '2021-01-04',
