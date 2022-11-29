@@ -1,2 +1,5 @@
 data/
 dev/trade targets/
+dev/dt_secrets.csv
+dev/dt_functions/
+dev/dt_functions.egg-info/
